@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Workout Tracker</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#12141a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Workouts">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<style>
+:root{
+  --bg:#12141a; --card:#1c202a; --card2:#252b38; --line:#2e3543;
+  --text:#e8eaf0; --dim:#9aa3b5; --accent:#ff9f43; --accent-dim:#b06a24;
+  --green:#3ddc84; --red:#ff5c5c; --blue:#58a6ff;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; font-size:16px}
+body{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+header{position:sticky; top:0; z-index:10; background:rgba(18,20,26,.92); backdrop-filter:blur(8px);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px}
+header h1{font-size:19px; margin:0; letter-spacing:.3px}
+header h1 span{color:var(--accent)}
+.sync-chip{border:1px solid var(--line); background:var(--card); color:var(--dim);
+  border-radius:999px; padding:5px 12px; font-size:12.5px; display:flex; gap:6px; align-items:center; cursor:pointer}
+.sync-chip .dot{width:8px; height:8px; border-radius:50%; background:#666}
+.sync-chip.ok .dot{background:var(--green)}
+.sync-chip.error .dot{background:var(--red)}
+.sync-chip.syncing .dot{background:var(--accent); animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+main{max-width:640px; margin:0 auto; padding:4px 14px 24px}
+.card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin:12px 0}
+.card h3{margin:0 0 10px; font-size:15px; color:var(--dim); font-weight:600; text-transform:uppercase; letter-spacing:.6px}
+label{display:block; font-size:13px; color:var(--dim); margin:10px 0 4px}
+input,select,textarea{width:100%; background:var(--card2); color:var(--text); border:1px solid var(--line);
+  border-radius:9px; padding:10px 11px; font-size:16px; outline:none}
+input:focus,select:focus{border-color:var(--accent-dim)}
+button{font-family:inherit; cursor:pointer}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; border:none; border-radius:11px;
+  padding:12px 16px; font-size:15.5px; font-weight:600; background:var(--card2); color:var(--text); border:1px solid var(--line)}
+.btn.primary{background:var(--accent); color:#1a1205; border-color:var(--accent)}
+.btn.small{padding:7px 12px; font-size:13.5px; border-radius:9px}
+.btn.danger{color:var(--red)}
+.btn.wide{width:100%; margin-top:10px}
+.row{display:flex; gap:10px}
+.row>*{flex:1}
+nav#tabs{position:fixed; bottom:0; left:0; right:0; z-index:10; display:flex;
+  background:rgba(18,20,26,.95); backdrop-filter:blur(8px); border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom)}
+nav#tabs button{flex:1; background:none; border:none; color:var(--dim); font-size:11.5px;
+  padding:8px 0 9px; display:flex; flex-direction:column; align-items:center; gap:3px}
+nav#tabs button .ico{font-size:21px; line-height:1}
+nav#tabs button.active{color:var(--accent)}
+.ex-card{background:var(--card2); border:1px solid var(--line); border-radius:12px; padding:12px; margin:10px 0}
+.ex-head{display:flex; gap:8px; align-items:center}
+.ex-head input{flex:1}
+.icon-btn{background:none; border:none; color:var(--dim); font-size:19px; padding:6px}
+.set-row{display:flex; gap:8px; align-items:center; margin-top:8px}
+.set-row .setnum{width:34px; text-align:center; color:var(--dim); font-size:13px; flex:none}
+.set-row input{text-align:center}
+.set-row .icon-btn{flex:none}
+.tag{display:inline-block; font-size:11px; font-weight:700; letter-spacing:.5px; border-radius:6px;
+  padding:2px 7px; margin-left:8px; vertical-align:middle}
+.tag.strength{background:#3a2c15; color:var(--accent)}
+.tag.cardio{background:#15303a; color:var(--blue)}
+.hist-item{border-bottom:1px solid var(--line); padding:12px 2px}
+.hist-item:last-child{border-bottom:none}
+.hist-date{font-weight:700; font-size:15px; display:flex; justify-content:space-between; align-items:center}
+.hist-date .actions{display:flex; gap:6px}
+.hist-line{color:var(--dim); font-size:14px; margin-top:5px; line-height:1.45}
+.hist-line b{color:var(--text); font-weight:600}
+.stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.stat{background:var(--card2); border:1px solid var(--line); border-radius:12px; padding:12px 8px; text-align:center}
+.stat .num{font-size:22px; font-weight:800; color:var(--accent)}
+.stat .lbl{font-size:11.5px; color:var(--dim); margin-top:3px}
+.pr-row{display:flex; justify-content:space-between; padding:9px 2px; border-bottom:1px solid var(--line); font-size:14.5px}
+.pr-row:last-child{border-bottom:none}
+.pr-row .val{color:var(--accent); font-weight:700}
+.pr-row .when{color:var(--dim); font-size:12.5px; margin-left:8px; font-weight:400}
+.muted{color:var(--dim); font-size:13.5px; line-height:1.5}
+.empty{text-align:center; color:var(--dim); padding:30px 10px; font-size:14.5px; line-height:1.6}
+#toast{position:fixed; left:50%; bottom:calc(84px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(20px);
+  background:#2b3242; color:var(--text); border:1px solid var(--line); border-radius:12px; padding:11px 18px;
+  font-size:14.5px; opacity:0; transition:.25s; z-index:50; max-width:86vw; text-align:center; pointer-events:none}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+details{margin-top:10px}
+details summary{color:var(--blue); font-size:14px; cursor:pointer}
+details .muted{margin-top:8px}
+.chart-wrap{margin-top:8px}
+.chart-wrap svg{width:100%; height:auto; display:block}
+a{color:var(--blue)}
+.tpl-row{display:flex; justify-content:space-between; align-items:center; padding:8px 2px; border-bottom:1px solid var(--line)}
+.tpl-row:last-child{border-bottom:none}
+.banner{background:#2c2415; border:1px solid var(--accent-dim); color:var(--accent); border-radius:10px;
+  padding:10px 12px; font-size:14px; margin:12px 0; display:flex; justify-content:space-between; align-items:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>Workout <span>Tracker</span></h1>
+  <button id="syncChip" class="sync-chip" onclick="onSyncChip()"><span class="dot"></span><span id="syncLabel">Set up sync</span></button>
+</header>
+<main id="view"></main>
+<nav id="tabs">
+  <button data-tab="log"      onclick="go('log')"><span class="ico">🏋️</span>Log</button>
+  <button data-tab="history"  onclick="go('history')"><span class="ico">📅</span>History</button>
+  <button data-tab="progress" onclick="go('progress')"><span class="ico">📈</span>Progress</button>
+  <button data-tab="settings" onclick="go('settings')"><span class="ico">⚙️</span>Settings</button>
+</nav>
+<datalist id="dl-strength"></datalist>
+<datalist id="dl-cardio"></datalist>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ============ constants & state ============ */
+const DATA_KEY="wt_data", SET_KEY="wt_settings", DRAFT_KEY="wt_draft";
+const DATA_FILE="data/workouts.json";
+const STARTER_STRENGTH=["Bench Press","Incline Dumbbell Press","Overhead Press","Deadlift","Squat","Leg Press","Seated Leg Curl","Leg Extension","Lat Pulldown","Seated Row","Bicep Curl","Tricep Pushdown"];
+const STARTER_CARDIO=["Elliptical","Stair Climber","Treadmill Walk","Walking","Stationary Bike","Rowing Machine"];
+
+let data=loadJSON(DATA_KEY)||{workouts:[],templates:[],deleted:{}};
+data.workouts=data.workouts||[]; data.templates=data.templates||[]; data.deleted=data.deleted||{};
+let settings=loadJSON(SET_KEY)||{token:"",repo:"",lastSync:0};
+let draft=loadJSON(DRAFT_KEY)||newDraft();
+let tab="log";
+let progressSel=null;
+let syncState=settings.token?"idle":"off";
+let syncTimer=null;
+
+/* ============ utils ============ */
+function $(id){return document.getElementById(id)}
+function loadJSON(k){try{const v=localStorage.getItem(k); return v?JSON.parse(v):null}catch(e){return null}}
+function saveJSON(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function uid(){return (crypto.randomUUID?crypto.randomUUID():Date.now()+"-"+Math.random().toString(36).slice(2))}
+function todayStr(){const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function fmtDate(s,long){const [y,m,d]=s.split("-").map(Number); const dt=new Date(y,m-1,d);
+  return dt.toLocaleDateString(undefined, long?{weekday:"short",month:"short",day:"numeric",year:"numeric"}:{month:"short",day:"numeric"})}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function toast(msg,ms){const t=$("toast"); t.innerHTML=msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),ms||2600)}
+function saveLocal(){saveJSON(DATA_KEY,data)}
+function saveSettings(){saveJSON(SET_KEY,settings)}
+function saveDraft(){saveJSON(DRAFT_KEY,draft)}
+function newDraft(){return {date:todayStr(),exercises:[],editingId:null}}
+function b64encode(str){const bytes=new TextEncoder().encode(str); let bin=""; const CH=0x8000;
+  for(let i=0;i<bytes.length;i+=CH) bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));
+  return btoa(bin)}
+function b64decode(b64){const bin=atob(b64.replace(/\s/g,"")); const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes)}
+function exerciseNames(type){const s=new Set(type==="strength"?STARTER_STRENGTH:STARTER_CARDIO);
+  for(const w of data.workouts) for(const e of w.exercises) if(e.type===type&&e.name) s.add(e.name);
+  for(const t of data.templates) for(const e of t.exercises) if(e.type===type&&e.name) s.add(e.name);
+  return [...s].sort((a,b)=>a.localeCompare(b))}
+function fillDatalists(){
+  $("dl-strength").innerHTML=exerciseNames("strength").map(n=>`<option value="${esc(n)}">`).join("");
+  $("dl-cardio").innerHTML=exerciseNames("cardio").map(n=>`<option value="${esc(n)}">`).join("")}
+
+/* ============ personal records ============ */
+function computePRs(excludeId){
+  const prs={strength:{},cardio:{}};
+  for(const w of data.workouts){
+    if(excludeId&&w.id===excludeId) continue;
+    for(const e of w.exercises){
+      if(e.type==="strength"){
+        for(const s of (e.sets||[])){
+          const wt=Number(s.weight)||0; if(wt<=0) continue;
+          const cur=prs.strength[e.name];
+          if(!cur||wt>cur.weight||(wt===cur.weight&&(Number(s.reps)||0)>cur.reps))
+            prs.strength[e.name]={weight:wt,reps:Number(s.reps)||0,date:w.date};
+        }
+      }else{
+        const mins=Number(e.minutes)||0; if(mins<=0) continue;
+        const cur=prs.cardio[e.name];
+        if(!cur||mins>cur.minutes) prs.cardio[e.name]={minutes:mins,date:w.date};
+      }
+    }
+  }
+  return prs;
+}
+function prMessages(workout){
+  const before=computePRs(workout.id); const msgs=[];
+  for(const e of workout.exercises){
+    if(!e.name) continue;
+    if(e.type==="strength"){
+      let best=0; for(const s of (e.sets||[])) best=Math.max(best,Number(s.weight)||0);
+      const old=before.strength[e.name];
+      if(best>0&&(!old||best>old.weight)) msgs.push(`🏆 New PR: ${esc(e.name)} ${best} lbs`);
+    }else{
+      const mins=Number(e.minutes)||0; const old=before.cardio[e.name];
+      if(mins>0&&(!old||mins>old.minutes)) msgs.push(`🏆 New PR: ${esc(e.name)} ${mins} min`);
+    }
+  }
+  return msgs;
+}
+
+/* ============ navigation & rendering ============ */
+function go(t){tab=t; render()}
+function render(){
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
+  fillDatalists();
+  const v=$("view");
+  if(tab==="log") v.innerHTML=viewLog();
+  else if(tab==="history") v.innerHTML=viewHistory();
+  else if(tab==="progress"){v.innerHTML=viewProgress(); drawChart();}
+  else v.innerHTML=viewSettings();
+  updateSyncChip();
+}
+
+/* ---------- Log tab ---------- */
+function viewLog(){
+  const tplOpts=data.templates.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join("");
+  let h="";
+  if(draft.editingId) h+=`<div class="banner"><span>✏️ Editing workout from ${fmtDate(draft.date,true)}</span>
+    <button class="btn small" onclick="cancelEdit()">Cancel</button></div>`;
+  h+=`<div class="card">
+    <div class="row">
+      <div><label>Date</label><input type="date" value="${esc(draft.date)}" onchange="draft.date=this.value;saveDraft()"></div>
+      <div><label>Start from template</label>
+        <select onchange="applyTemplate(this.value);this.value=''">
+          <option value="">${data.templates.length?"Choose…":"No templates yet"}</option>${tplOpts}
+        </select></div>
+    </div>
+  </div>`;
+  h+=draft.exercises.map((e,i)=>e.type==="strength"?strengthCard(e,i):cardioCard(e,i)).join("");
+  if(!draft.exercises.length) h+=`<div class="empty">Start your workout —<br>add a strength or cardio exercise below.</div>`;
+  h+=`<div class="row" style="margin-top:12px">
+    <button class="btn" onclick="addExercise('strength')">＋ Strength</button>
+    <button class="btn" onclick="addExercise('cardio')">＋ Cardio</button>
+  </div>
+  <button class="btn primary wide" onclick="saveWorkout()">💾 Save Workout</button>
+  <div class="row" style="margin-top:10px">
+    <button class="btn small" onclick="saveTemplate()">Save as template</button>
+    <button class="btn small danger" onclick="clearDraft()">Clear</button>
+  </div>`;
+  return h;
+}
+function strengthCard(e,i){
+  const sets=(e.sets||[]).map((s,j)=>`<div class="set-row">
+    <span class="setnum">${j+1}</span>
+    <input type="number" inputmode="decimal" placeholder="Weight (lbs)" value="${s.weight??""}"
+      oninput="draft.exercises[${i}].sets[${j}].weight=this.value;saveDraftSoon()">
+    <input type="number" inputmode="numeric" placeholder="Reps" value="${s.reps??""}"
+      oninput="draft.exercises[${i}].sets[${j}].reps=this.value;saveDraftSoon()">
+    <button class="icon-btn" onclick="removeSet(${i},${j})">✕</button>
+  </div>`).join("");
+  return `<div class="ex-card">
+    <div class="ex-head">
+      <input list="dl-strength" placeholder="Exercise (e.g. Bench Press)" value="${esc(e.name)}"
+        oninput="draft.exercises[${i}].name=this.value;saveDraftSoon()">
+      <span class="tag strength">LIFT</span>
+      <button class="icon-btn" onclick="removeExercise(${i})">🗑</button>
+    </div>
+    ${sets}
+    <button class="btn small" style="margin-top:10px" onclick="addSet(${i})">＋ Add Set</button>
+  </div>`;
+}
+function cardioCard(e,i){
+  return `<div class="ex-card">
+    <div class="ex-head">
+      <input list="dl-cardio" placeholder="Exercise (e.g. Elliptical)" value="${esc(e.name)}"
+        oninput="draft.exercises[${i}].name=this.value;saveDraftSoon()">
+      <span class="tag cardio">CARDIO</span>
+      <button class="icon-btn" onclick="removeExercise(${i})">🗑</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div><label>Duration (minutes)</label>
+        <input type="number" inputmode="numeric" placeholder="30" value="${e.minutes??""}"
+          oninput="draft.exercises[${i}].minutes=this.value;saveDraftSoon()"></div>
+      <div><label>Machine setting (optional)</label>
+        <input type="number" inputmode="decimal" placeholder="e.g. 8" value="${e.setting??""}"
+          oninput="draft.exercises[${i}].setting=this.value;saveDraftSoon()"></div>
+    </div>
+  </div>`;
+}
+let draftTimer=null;
+function saveDraftSoon(){clearTimeout(draftTimer); draftTimer=setTimeout(saveDraft,400)}
+function addExercise(type){
+  draft.exercises.push(type==="strength"?{type,name:"",sets:[{weight:"",reps:""}]}:{type,name:"",minutes:"",setting:""});
+  saveDraft(); render();
+  const inputs=document.querySelectorAll(".ex-head input"); if(inputs.length) inputs[inputs.length-1].focus();
+}
+function removeExercise(i){draft.exercises.splice(i,1); saveDraft(); render()}
+function addSet(i){const sets=draft.exercises[i].sets; const last=sets[sets.length-1]||{};
+  sets.push({weight:last.weight||"",reps:last.reps||""}); saveDraft(); render()}
+function removeSet(i,j){draft.exercises[i].sets.splice(j,1); saveDraft(); render()}
+function applyTemplate(id){
+  if(!id) return;
+  const t=data.templates.find(t=>t.id===id); if(!t) return;
+  if(draft.exercises.length&&!confirm("Replace current exercises with this template?")) return;
+  draft.exercises=JSON.parse(JSON.stringify(t.exercises));
+  saveDraft(); render(); toast(`Loaded template “${esc(t.name)}”`);
+}
+function cleanWorkout(){
+  const exercises=[];
+  for(const e of draft.exercises){
+    const name=(e.name||"").trim(); if(!name) continue;
+    if(e.type==="strength"){
+      const sets=(e.sets||[]).map(s=>({weight:Number(s.weight)||0,reps:Number(s.reps)||0})).filter(s=>s.reps>0||s.weight>0);
+      if(sets.length) exercises.push({type:"strength",name,sets});
+    }else{
+      const minutes=Number(e.minutes)||0;
+      if(minutes>0){const ex={type:"cardio",name,minutes};
+        if(e.setting!==""&&e.setting!=null&&!isNaN(Number(e.setting))) ex.setting=Number(e.setting);
+        exercises.push(ex);}
+    }
+  }
+  return exercises;
+}
+function saveWorkout(){
+  const exercises=cleanWorkout();
+  if(!exercises.length){toast("Add at least one exercise with data first"); return}
+  const w={id:draft.editingId||uid(),date:draft.date||todayStr(),exercises,updatedAt:Date.now()};
+  const msgs=prMessages(w);
+  data.workouts=data.workouts.filter(x=>x.id!==w.id);
+  data.workouts.push(w);
+  sortData(); saveLocal();
+  draft=newDraft(); saveDraft();
+  render();
+  toast(msgs.length?("Workout saved!<br>"+msgs.join("<br>")):"Workout saved ✅",msgs.length?4200:2200);
+  scheduleSync();
+}
+function saveTemplate(){
+  const exercises=cleanWorkout();
+  if(!exercises.length){toast("Add exercises before saving a template"); return}
+  const name=prompt("Template name (e.g. Leg Day):"); if(!name) return;
+  data.templates.push({id:uid(),name:name.trim(),exercises,updatedAt:Date.now()});
+  sortData(); saveLocal(); render(); toast(`Template “${esc(name)}” saved`); scheduleSync();
+}
+function clearDraft(){if(draft.exercises.length&&!confirm("Discard this unsaved workout?")) return;
+  draft=newDraft(); saveDraft(); render()}
+function cancelEdit(){draft=newDraft(); saveDraft(); render()}
+
+/* ---------- History tab ---------- */
+function describeExercise(e){
+  if(e.type==="strength"){
+    const sets=(e.sets||[]).map(s=>`${s.weight||0}×${s.reps||0}`).join(", ");
+    return `<b>${esc(e.name)}</b> — ${e.sets.length} set${e.sets.length!==1?"s":""}: ${sets}`;
+  }
+  return `<b>${esc(e.name)}</b> — ${e.minutes} min${e.setting!=null?` @ setting ${e.setting}`:""}`;
+}
+function viewHistory(){
+  if(!data.workouts.length) return `<div class="empty">No workouts yet.<br>Your history will appear here.</div>`;
+  const items=[...data.workouts].sort((a,b)=>b.date.localeCompare(a.date)||b.updatedAt-a.updatedAt);
+  let h=`<div class="card"><h3>History · ${items.length} workout${items.length!==1?"s":""}</h3>`;
+  for(const w of items){
+    h+=`<div class="hist-item">
+      <div class="hist-date"><span>${fmtDate(w.date,true)}</span>
+        <span class="actions">
+          <button class="btn small" onclick="editWorkout('${w.id}')">Edit</button>
+          <button class="btn small danger" onclick="deleteWorkout('${w.id}')">Delete</button>
+        </span></div>
+      ${w.exercises.map(e=>`<div class="hist-line">${describeExercise(e)}</div>`).join("")}
+    </div>`;
+  }
+  return h+"</div>";
+}
+function editWorkout(id){
+  const w=data.workouts.find(x=>x.id===id); if(!w) return;
+  if(draft.exercises.length&&!confirm("Discard the workout currently being entered?")) return;
+  draft={date:w.date,editingId:w.id,
+    exercises:JSON.parse(JSON.stringify(w.exercises)).map(e=>e.type==="cardio"?{setting:"",...e}:e)};
+  saveDraft(); go("log");
+}
+function deleteWorkout(id){
+  if(!confirm("Delete this workout permanently?")) return;
+  data.workouts=data.workouts.filter(x=>x.id!==id);
+  data.deleted[id]=Date.now();
+  saveLocal(); render(); toast("Workout deleted"); scheduleSync();
+}
+
+/* ---------- Progress tab ---------- */
+function weekStart(){const d=new Date(); const day=(d.getDay()+6)%7; d.setDate(d.getDate()-day);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function viewProgress(){
+  if(!data.workouts.length) return `<div class="empty">Log a few workouts and your progress<br>charts and records will show up here.</div>`;
+  const ws=weekStart(), month=todayStr().slice(0,7);
+  const thisWeek=data.workouts.filter(w=>w.date>=ws).length;
+  const thisMonth=data.workouts.filter(w=>w.date.startsWith(month)).length;
+  let cardioMin=0; for(const w of data.workouts) if(w.date.startsWith(month))
+    for(const e of w.exercises) if(e.type==="cardio") cardioMin+=Number(e.minutes)||0;
+  const sNames=[...new Set(data.workouts.flatMap(w=>w.exercises.filter(e=>e.type==="strength").map(e=>e.name)))].sort();
+  const cNames=[...new Set(data.workouts.flatMap(w=>w.exercises.filter(e=>e.type==="cardio").map(e=>e.name)))].sort();
+  if(!progressSel||![...sNames.map(n=>"s|"+n),...cNames.map(n=>"c|"+n)].includes(progressSel))
+    progressSel=sNames.length?("s|"+sNames[0]):(cNames.length?("c|"+cNames[0]):null);
+  const opts=(names,p,lbl)=>names.length?`<optgroup label="${lbl}">${names.map(n=>
+    `<option value="${p}|${esc(n)}" ${progressSel===p+"|"+n?"selected":""}>${esc(n)}</option>`).join("")}</optgroup>`:"";
+  const prs=computePRs(null);
+  const prRows=(o,fmt)=>Object.keys(o).sort().map(n=>`<div class="pr-row"><span>${esc(n)}</span>
+    <span><span class="val">${fmt(o[n])}</span><span class="when">${fmtDate(o[n].date)}</span></span></div>`).join("");
+  return `
+  <div class="card"><h3>This period</h3>
+    <div class="stat-grid">
+      <div class="stat"><div class="num">${thisWeek}</div><div class="lbl">workouts<br>this week</div></div>
+      <div class="stat"><div class="num">${thisMonth}</div><div class="lbl">workouts<br>this month</div></div>
+      <div class="stat"><div class="num">${cardioMin}</div><div class="lbl">cardio min<br>this month</div></div>
+    </div>
+  </div>
+  <div class="card"><h3>Exercise progress</h3>
+    <select onchange="progressSel=this.value;render()">
+      ${opts(sNames,"s","Strength")}${opts(cNames,"c","Cardio")}
+    </select>
+    <div class="chart-wrap" id="chart"></div>
+  </div>
+  <div class="card"><h3>Personal records — strength</h3>
+    ${Object.keys(prs.strength).length?prRows(prs.strength,p=>`${p.weight} lbs × ${p.reps}`):'<div class="muted">No strength PRs yet.</div>'}
+  </div>
+  <div class="card"><h3>Personal records — cardio</h3>
+    ${Object.keys(prs.cardio).length?prRows(prs.cardio,p=>`${p.minutes} min`):'<div class="muted">No cardio PRs yet.</div>'}
+  </div>`;
+}
+function drawChart(){
+  const box=$("chart"); if(!box||!progressSel) return;
+  const [kind,name]=[progressSel.slice(0,1),progressSel.slice(2)];
+  const pts=[];
+  for(const w of [...data.workouts].sort((a,b)=>a.date.localeCompare(b.date))){
+    for(const e of w.exercises){
+      if(e.name!==name) continue;
+      if(kind==="s"&&e.type==="strength"){
+        let best=0; for(const s of e.sets) best=Math.max(best,Number(s.weight)||0);
+        if(best>0) pts.push({d:w.date,v:best});
+      }else if(kind==="c"&&e.type==="cardio"){
+        const m=Number(e.minutes)||0; if(m>0) pts.push({d:w.date,v:m});
+      }
+    }
+  }
+  const unit=kind==="s"?"lbs":"min";
+  if(!pts.length){box.innerHTML='<div class="muted">No data for this exercise yet.</div>'; return}
+  const W=340,H=170,P={l:38,r:14,t:16,b:26};
+  const vs=pts.map(p=>p.v);
+  let lo=Math.min(...vs), hi=Math.max(...vs);
+  if(lo===hi){lo=Math.max(0,lo-10); hi=hi+10}
+  const pad=(hi-lo)*0.1; lo=Math.max(0,lo-pad); hi=hi+pad;
+  const X=i=>pts.length===1?(P.l+(W-P.l-P.r)/2):P.l+i*(W-P.l-P.r)/(pts.length-1);
+  const Y=v=>P.t+(H-P.t-P.b)*(1-(v-lo)/(hi-lo));
+  const line=pts.map((p,i)=>`${X(i).toFixed(1)},${Y(p.v).toFixed(1)}`).join(" ");
+  const grid=[0,.5,1].map(f=>{const y=P.t+(H-P.t-P.b)*f; const val=hi-(hi-lo)*f;
+    return `<line x1="${P.l}" y1="${y}" x2="${W-P.r}" y2="${y}" stroke="#2e3543" stroke-width="1"/>
+      <text x="${P.l-5}" y="${y+3.5}" text-anchor="end" font-size="9.5" fill="#9aa3b5">${Math.round(val)}</text>`}).join("");
+  const dots=pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3" fill="#ff9f43"/>`).join("");
+  const last=pts[pts.length-1];
+  box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    ${grid}
+    ${pts.length>1?`<polyline points="${line}" fill="none" stroke="#ff9f43" stroke-width="2" stroke-linejoin="round"/>`:""}
+    ${dots}
+    <text x="${P.l}" y="${H-6}" font-size="9.5" fill="#9aa3b5">${fmtDate(pts[0].d)}</text>
+    <text x="${W-P.r}" y="${H-6}" text-anchor="end" font-size="9.5" fill="#9aa3b5">${fmtDate(last.d)}</text>
+    <text x="${W-P.r}" y="${P.t-4}" text-anchor="end" font-size="11" font-weight="700" fill="#e8eaf0">Latest: ${last.v} ${unit}</text>
+  </svg>
+  <div class="muted">${pts.length} session${pts.length!==1?"s":""} logged · best set ${kind==="s"?"weight":"duration"} per session</div>`;
+}
+
+/* ---------- Settings tab ---------- */
+function viewSettings(){
+  const tplRows=data.templates.map(t=>`<div class="tpl-row"><span>${esc(t.name)}
+      <span class="muted">· ${t.exercises.length} exercise${t.exercises.length!==1?"s":""}</span></span>
+    <button class="btn small danger" onclick="deleteTemplate('${t.id}')">Delete</button></div>`).join("");
+  const last=settings.lastSync?new Date(settings.lastSync).toLocaleString():"never";
+  return `
+  <div class="card"><h3>Sync across devices</h3>
+    <div class="muted">Your workouts sync through a private GitHub repo, so your iPhone, iPad, and Mac all share one history. Status: <b>${syncStateText()}</b> · last sync: ${last}</div>
+    <label>GitHub token</label>
+    <input type="password" id="setToken" placeholder="github_pat_…" value="${esc(settings.token)}" autocomplete="off">
+    <label>Data repository</label>
+    <input type="text" id="setRepo" placeholder="wilsonedward10-sys/workout-data" value="${esc(settings.repo)}">
+    <button class="btn primary wide" onclick="saveSyncSettings()">Save &amp; Sync Now</button>
+    <details><summary>How to create your token (one time)</summary>
+      <div class="muted">
+        1. On any device, open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Developer settings → Fine-grained tokens → Generate new token</a>.<br>
+        2. Name it “workout-tracker”, set expiration (1 year is fine).<br>
+        3. Under <b>Repository access</b>, choose <b>Only select repositories</b> → <b>workout-data</b>.<br>
+        4. Under <b>Permissions → Repository permissions</b>, set <b>Contents</b> to <b>Read and write</b>.<br>
+        5. Generate, copy the token, and paste it above on each device (it's stored only on the device).
+      </div>
+    </details>
+  </div>
+  <div class="card"><h3>Templates</h3>
+    ${tplRows||'<div class="muted">No templates yet. Build a workout in the Log tab and tap “Save as template”.</div>'}
+  </div>
+  <div class="card"><h3>Export &amp; backup</h3>
+    <div class="muted">${data.workouts.length} workout${data.workouts.length!==1?"s":""} stored.</div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" onclick="exportCSV()">Export CSV</button>
+      <button class="btn" onclick="exportBackup()">Backup JSON</button>
+    </div>
+    <label style="margin-top:12px">Restore / import a backup</label>
+    <input type="file" accept=".json,application/json" onchange="importBackup(this)">
+    <div class="muted" style="margin-top:8px">The CSV opens directly in Google Sheets, Numbers, or Excel for reports.</div>
+  </div>
+  <div class="card"><h3>About</h3>
+    <div class="muted">Workout Tracker v1 · weights in lbs · built with ❤️ &amp; hosted on <a href="https://github.com/wilsonedward10-sys/workout-tracker" target="_blank" rel="noopener">GitHub Pages</a>.<br>
+    Add to Home Screen: in Safari tap Share → “Add to Home Screen”. On Mac: Safari → File → “Add to Dock”.</div>
+  </div>`;
+}
+function deleteTemplate(id){
+  if(!confirm("Delete this template?")) return;
+  data.templates=data.templates.filter(t=>t.id!==id);
+  data.deleted[id]=Date.now();
+  saveLocal(); render(); scheduleSync();
+}
+function saveSyncSettings(){
+  settings.token=$("setToken").value.trim();
+  settings.repo=$("setRepo").value.trim()||"wilsonedward10-sys/workout-data";
+  saveSettings();
+  if(settings.token) syncNow(); else {syncState="off"; render()}
+}
+function exportCSV(){
+  const rows=[["Date","Type","Exercise","Set","Reps","Weight (lbs)","Minutes","Setting"]];
+  const items=[...data.workouts].sort((a,b)=>a.date.localeCompare(b.date));
+  for(const w of items) for(const e of w.exercises){
+    if(e.type==="strength") e.sets.forEach((s,i)=>rows.push([w.date,"Strength",e.name,i+1,s.reps,s.weight,"",""]));
+    else rows.push([w.date,"Cardio",e.name,"","","",e.minutes,e.setting??""]);
+  }
+  const csv=rows.map(r=>r.map(c=>{c=String(c??""); return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c}).join(",")).join("\r\n");
+  downloadFile("workouts-"+todayStr()+".csv","text/csv",csv);
+}
+function exportBackup(){downloadFile("workout-backup-"+todayStr()+".json","application/json",JSON.stringify(data,null,1))}
+async function downloadFile(name,type,content){
+  const blob=new Blob([content],{type});
+  const file=new File([blob],name,{type});
+  if(navigator.canShare&&navigator.canShare({files:[file]})&&/iPhone|iPad/.test(navigator.userAgent)){
+    try{await navigator.share({files:[file]}); return}catch(e){if(e.name==="AbortError") return}
+  }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+function importBackup(input){
+  const f=input.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{try{
+    const incoming=JSON.parse(r.result);
+    if(!incoming||!Array.isArray(incoming.workouts)) throw new Error("bad format");
+    data=mergeData(data,{workouts:incoming.workouts||[],templates:incoming.templates||[],deleted:incoming.deleted||{}});
+    sortData(); saveLocal(); render(); toast("Backup merged: now "+data.workouts.length+" workouts"); scheduleSync();
+  }catch(e){toast("Couldn't read that backup file")}};
+  r.readAsText(f); input.value="";
+}
+
+/* ============ merge & sync ============ */
+function sortData(){
+  data.workouts.sort((a,b)=>a.date.localeCompare(b.date)||String(a.id).localeCompare(String(b.id)));
+  data.templates.sort((a,b)=>a.name.localeCompare(b.name)||String(a.id).localeCompare(String(b.id)));
+}
+function mergeData(a,b){
+  const deleted={};
+  for(const src of [a.deleted||{},b.deleted||{}])
+    for(const [id,ts] of Object.entries(src)) deleted[id]=Math.max(deleted[id]||0,ts);
+  const cutoff=Date.now()-1000*60*60*24*180;
+  for(const id of Object.keys(deleted)) if(deleted[id]<cutoff) delete deleted[id];
+  const pick=key=>{
+    const m=new Map();
+    for(const it of [...(a[key]||[]),...(b[key]||[])]){
+      if(!it||!it.id) continue;
+      if(deleted[it.id]&&deleted[it.id]>=(it.updatedAt||0)) continue;
+      const cur=m.get(it.id);
+      if(!cur||(it.updatedAt||0)>(cur.updatedAt||0)) m.set(it.id,it);
+    }
+    return [...m.values()];
+  };
+  return {workouts:pick("workouts"),templates:pick("templates"),deleted};
+}
+function syncStateText(){
+  return {off:"not set up",idle:"ready",syncing:"syncing…",ok:"synced ✅",error:"error ⚠️"}[syncState]||syncState;
+}
+function updateSyncChip(){
+  const chip=$("syncChip");
+  chip.className="sync-chip "+(syncState==="ok"?"ok":syncState==="error"?"error":syncState==="syncing"?"syncing":"");
+  $("syncLabel").textContent={off:"Set up sync",idle:"Sync",syncing:"Syncing…",ok:"Synced",error:"Sync error"}[syncState]||"Sync";
+}
+function onSyncChip(){if(!settings.token){go("settings")}else syncNow()}
+function scheduleSync(){if(!settings.token) return; clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,1500)}
+async function syncNow(retried){
+  if(!settings.token||!settings.repo){syncState="off"; updateSyncChip(); return}
+  syncState="syncing"; updateSyncChip();
+  const api=`https://api.github.com/repos/${settings.repo}/contents/${DATA_FILE}`;
+  const H={"Authorization":"Bearer "+settings.token,"Accept":"application/vnd.github+json"};
+  try{
+    let sha=null, remote=null;
+    const r=await fetch(api+"?t="+Date.now(),{headers:H,cache:"no-store"});
+    if(r.status===200){
+      const j=await r.json(); sha=j.sha;
+      try{remote=JSON.parse(b64decode(j.content))}catch(e){remote=null}
+    }else if(r.status===401||r.status===403){throw new Error("Token rejected — check it in Settings")}
+    else if(r.status!==404){throw new Error("GitHub error "+r.status)}
+    const merged=mergeData(data,remote||{workouts:[],templates:[],deleted:{}});
+    data=merged; sortData(); saveLocal();
+    const payload=JSON.stringify(data,null,1);
+    const remoteStr=remote?JSON.stringify(mergeData(remote,{workouts:[],templates:[],deleted:{}}),null,1):null;
+    if(payload!==remoteStr){
+      const body={message:"sync "+new Date().toISOString(),content:b64encode(payload)};
+      if(sha) body.sha=sha;
+      const p=await fetch(api,{method:"PUT",headers:H,body:JSON.stringify(body)});
+      if(p.status===409||p.status===422){
+        if(!retried) return syncNow(true);
+        throw new Error("Sync conflict — try again");
+      }
+      if(!p.ok) throw new Error("GitHub write error "+p.status);
+    }
+    settings.lastSync=Date.now(); saveSettings();
+    syncState="ok";
+  }catch(e){
+    syncState="error";
+    if(!navigator.onLine) syncState="idle";
+    else toast("Sync: "+esc(e.message||"failed"));
+  }
+  if(tab==="settings"||tab==="progress"||tab==="history") render(); else updateSyncChip();
+}
+
+/* ============ boot ============ */
+if(!settings.repo) settings.repo="wilsonedward10-sys/workout-data";
+render();
+if(settings.token) syncNow();
+window.addEventListener("online",()=>{if(settings.token) syncNow()});
+if("serviceWorker" in navigator&&location.protocol==="https:")
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+</script>
+</body>
+</html>
